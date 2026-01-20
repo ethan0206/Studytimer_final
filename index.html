@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>학교 타이머 (실시간 연동)</title>
+<style>
+body {
+    margin: 0;
+    background: #0b132b;
+    color: white;
+    font-family: 'Arial', sans-serif;
+    text-align: center;
+}
+#container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 100vh;
+}
+#title {
+    font-size: 40px;
+    margin-bottom: 10px;
+}
+#now {
+    font-size: 28px;
+    margin-bottom: 10px;
+    color: #ffd166;
+}
+#timeInfo {
+    font-size: 26px;
+    margin-bottom: 15px;
+    color: #cfd8ff;
+}
+#status {
+    font-size: 50px;
+    margin-bottom: 10px;
+}
+#timer {
+    font-size: 120px;
+    font-weight: bold;
+}
+</style>
+</head>
+<body>
+
+<div id="container">
+    <div id="title">📚 학교 실시간 타이머</div>
+    <div id="now">현재 시각: --:--:--</div>
+    <div id="timeInfo">다음 일정 대기 중</div>
+    <div id="status">대기 중</div>
+    <div id="timer">--:--</div>
+</div>
+
+<!-- 학교 종소리 -->
+<audio id="bell" src="https://actions.google.com/sounds/v1/alarms/school_bell.ogg"></audio>
+
+<script>
+const schedule = [
+    {name: "1교시", start:"08:40", end:"10:00"},
+    {name: "쉬는시간", start:"10:00", end:"10:20"},
+    {name: "2교시", start:"10:20", end:"11:40"},
+    {name: "점심", start:"11:40", end:"12:40"},
+    {name: "3교시", start:"12:40", end:"14:00"},
+    {name: "쉬는시간", start:"14:00", end:"14:20"},
+    {name: "4교시", start:"14:20", end:"15:30"}
+];
+
+let lastRung = ""; // 마지막으로 울린 시간 저장
+
+function toMinutes(t){
+    const [h,m] = t.split(":").map(Number);
+    return h*60 + m;
+}
+
+function updateClock(){
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2,'0');
+    const m = String(now.getMinutes()).padStart(2,'0');
+    const s = String(now.getSeconds()).padStart(2,'0');
+
+    document.getElementById("now").innerText = 
+        `현재 시각: ${h}:${m}:${s}`;
+
+    const nowMin = now.getHours()*60 + now.getMinutes();
+    let current = null;
+    let next = null;
+
+    for(let i=0;i<schedule.length;i++){
+        const start = toMinutes(schedule[i].start);
+        const end = toMinutes(schedule[i].end);
+
+        if(nowMin >= start && nowMin < end){
+            current = schedule[i];
+            next = schedule[i+1] || null;
+            break;
+        }
+        if(nowMin < start){
+            next = schedule[i];
+            break;
+        }
+    }
+
+    if(current){
+        document.getElementById("status").innerText = current.name;
+
+        const endMin = toMinutes(current.end);
+        let remain = (endMin - nowMin)*60 - now.getSeconds();
+        if(remain < 0) remain = 0;
+
+        let min = Math.floor(remain/60);
+        let sec = remain % 60;
+        document.getElementById("timer").innerText =
+            `${String(min).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+
+        document.getElementById("timeInfo").innerText =
+            `시작: ${current.start} → 종료: ${current.end}`;
+
+        // 🔔 종료 시각에 정확히 종 울리기
+        if(nowMin === endMin && lastRung !== current.end){
+            document.getElementById("bell").play();
+            lastRung = current.end;
+        }
+
+    } else if(next){
+        document.getElementById("status").innerText = "대기 중";
+        document.getElementById("timer").innerText = "--:--";
+        document.getElementById("timeInfo").innerText =
+            `다음: ${next.name} (${next.start} 시작)`;
+
+        // 🔔 시작 시각에도 종 울리기
+        if(nowMin === toMinutes(next.start) && lastRung !== next.start){
+            document.getElementById("bell").play();
+            lastRung = next.start;
+        }
+
+    } else {
+        document.getElementById("status").innerText = "모든 일정 종료 🎉";
+        document.getElementById("timer").innerText = "--:--";
+        document.getElementById("timeInfo").innerText = "오늘 일정 완료";
+    }
+}
+
+// 1초마다 갱신
+setInterval(updateClock, 1000);
+updateClock();
+</script>
+
+</body>
+</html>
