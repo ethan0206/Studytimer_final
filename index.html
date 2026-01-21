@@ -128,6 +128,18 @@ const timetable = [
   { name: "4교시", start: "14:20", end: "15:30" }
 ];
 
+// 페이지 로드 시 시간표 항목들을 한 번만 생성
+document.addEventListener("DOMContentLoaded", () => {
+  const scheduleBox = document.getElementById("schedule");
+  timetable.forEach((t, index) => {
+    const div = document.createElement("div");
+    div.className = "item";
+    div.id = `item-${index}`; // 고유 ID 추가
+    div.textContent = `${t.name} ${t.start}–${t.end}`;
+    scheduleBox.appendChild(div);
+  });
+});
+
 function tick() {
   const now = new Date();
   const h = String(now.getHours()).padStart(2,"0");
@@ -137,15 +149,15 @@ function tick() {
 
   document.getElementById("time").innerText = `${h}:${m}:${s}`;
 
-  const box = document.getElementById("schedule");
-  box.innerHTML = "";
-
-  timetable.forEach(t => {
-    const div = document.createElement("div");
-    div.className = "item";
-    if (hm >= t.start && hm < t.end) div.classList.add("active");
-    div.textContent = `${t.name} ${t.start}–${t.end}`;
-    box.appendChild(div);
+  timetable.forEach((t, index) => {
+    const itemDiv = document.getElementById(`item-${index}`); // 고유 ID로 요소를 가져옴
+    if (itemDiv) { // 요소가 존재하는지 확인
+      if (hm >= t.start && hm < t.end) {
+        itemDiv.classList.add("active");
+      } else {
+        itemDiv.classList.remove("active");
+      }
+    }
 
     if (soundEnabled && s === "00" && hm === t.start) {
       playMelody();
