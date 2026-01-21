@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>Study Timetable</title>
+<title>Study Timetable with White Noise</title>
 <style>
   body {
     margin: 0;
@@ -43,6 +43,7 @@
   button {
     font-size: 18px;
     padding: 10px 20px;
+    margin: 5px; /* 버튼 간 간격 추가 */
   }
 </style>
 </head>
@@ -57,6 +58,7 @@
 <div id="right">
   <div id="time">--:--:--</div>
   <button onclick="enableSound()">🔔 종소리 테스트</button>
+  <button onclick="toggleWhiteNoise()" id="whiteNoiseButton">😴 백색소음 켜기</button>
 </div>
 
 <script>
@@ -88,7 +90,7 @@ const melody = [
 ];
 
 function playMelody() {
-  if (!audioCtx) return;
+  if (!audioCtx) return; // 오디오 컨텍스트가 활성화되지 않았으면 재생하지 않음
   let t = audioCtx.currentTime;
 
   melody.forEach(freq => {
@@ -117,15 +119,64 @@ function playMelody() {
   });
 }
 
+/* ====== 백색소음 ====== */
+let whiteNoiseCtx;
+let whiteNoiseSource = null;
+let whiteNoiseGainNode;
+
+function toggleWhiteNoise() {
+  const button = document.getElementById('whiteNoiseButton');
+
+  if (whiteNoiseSource) { // 백색소음이 재생 중이면 중지
+    whiteNoiseSource.stop();
+    whiteNoiseSource.disconnect();
+    whiteNoiseGainNode.disconnect();
+    if (whiteNoiseCtx) { // whiteNoiseCtx가 존재하고 연결되어 있다면 닫기 시도
+      whiteNoiseCtx.close().then(() => {
+        whiteNoiseCtx = null; // 오디오 컨텍스트를 닫은 후 null로 설정
+      }).catch(e => console.error("Error closing whiteNoiseCtx:", e));
+    }
+    whiteNoiseSource = null;
+    button.textContent = "😴 백색소음 켜기";
+    console.log("백색소음 중지");
+  } else { // 백색소음이 재생 중이 아니면 시작
+    // 오디오 컨텍스트는 사용자 제스처(클릭)에 의해 생성되어야 활성화됨
+    if (!whiteNoiseCtx) {
+      whiteNoiseCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    // ScriptProcessorNode는 Deprecated 되었지만, 간편하게 백색소음을 생성하기에 적합
+    whiteNoiseSource = whiteNoiseCtx.createScriptProcessor(4096, 0, 1);
+    whiteNoiseSource.onaudioprocess = function(e) {
+      const output = e.outputBuffer.getChannelData(0);
+      for (let i = 0; i < output.length; i++) {
+        output[i] = Math.random() * 2 - 1; // -1에서 1 사이의 랜덤 값으로 백색소음 생성
+      }
+    };
+
+    whiteNoiseGainNode = whiteNoiseCtx.createGain();
+    whiteNoiseGainNode.gain.value = 0.1; // 백색소음 볼륨 조절 (0.1은 낮은 볼륨)
+
+    whiteNoiseSource.connect(whiteNoiseGainNode);
+    whiteNoiseGainNode.connect(whiteNoiseCtx.destination);
+
+    button.textContent = "🔊 백색소음 끄기";
+    console.log("백색소음 시작");
+  }
+}
+
+
 /* ====== 시간표 ====== */
 const timetable = [
-  { name: "1교시", start: "08:40", end: "10:00" },
-  { name: "쉬는시간", start: "10:00", end: "10:20" },
-  { name: "2교시", start: "10:20", end: "11:40" },
-  { name: "점심", start: "11:40", end: "12:40" },
-  { name: "3교시", start: "12:40", end: "14:00" },
-  { name: "쉬는시간", start: "14:00", end: "14:20" },
-  { name: "4교시", start: "14:20", end: "15:30" }
+  { name: "1교시", start: "08:40", end: "10:00" }, // 80분
+  { name: "쉬는시간", start: "10:00", end: "10:20" }, // 20분
+  { name: "2교시", start: "10:20", end: "11:40" }, // 80분
+  { name: "점심", start: "11:40", end: "12:40" },    // 60분
+  { name: "3교시", start: "12:40", end: "13:40" }, // 60분
+  { name: "쉬는시간", start: "13:40", end: "14:00" }, // 20분
+  { name: "4교시", start: "14:00", end: "15:00" }, // 60분
+  { name: "쉬는시간", start: "15:00", end: "15:20" }, // 20분
+  { name: "5교시", start: "15:20", end: "16:30" }  // 70분
 ];
 
 // 페이지 로드 시 시간표 항목들을 한 번만 생성
@@ -138,6 +189,8 @@ document.addEventListener("DOMContentLoaded", () => {
     div.textContent = `${t.name} ${t.start}–${t.end}`;
     scheduleBox.appendChild(div);
   });
+  // 초기 시간 표시
+  tick();
 });
 
 function tick() {
