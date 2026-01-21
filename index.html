@@ -1,164 +1,84 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<title>학교 시간표 타이머</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0.Toggle=1">
-
-<style>
-body {
-  margin: 0;
-  background: #0b0f1a;
-  color: white;
-  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-  display: flex;
-  height: 100vh;
-}
-
-/* 왼쪽 현황표 */
-#sidebar {
-  width: 280px;
-  padding: 20px;
-  background: #12182b;
-}
-
-#sidebar h2 {
-  margin-top: 0;
-  font-size: 20px;
-  margin-bottom: 15px;
-}
-
-.item {
-  padding: 10px 12px;
-  margin-bottom: 8px;
-  border-radius: 10px;
-  background: #1c2340;
-  font-size: 16px;
-}
-
-.done {
-  background: #2d8f5a;
-  opacity: 0.7;
-}
-
-.now {
-  background: #4da3ff;
-  color: black;
-  font-weight: bold;
-}
-
-/* 메인 화면 */
-#main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-}
-
-#time {
-  font-size: 72px;
-  margin-bottom: 10px;
-}
-
-#status {
-  font-size: 22px;
-  margin-bottom: 25px;
-  opacity: 0.85;
-}
-
-button {
-  font-size: 18px;
-  padding: 12px 26px;
-  border-radius: 14px;
-  border: none;
-  background: #4da3ff;
-  color: black;
-}
-</style>
-</head>
-
-<body>
-
-<!-- 왼쪽 현황표 -->
-<div id="sidebar">
-  <h2>📋 오늘의 수업</h2>
-  <div id="list"></div>
-</div>
-
-<!-- 메인 -->
-<div id="main">
-  <div id="time">--:--:--</div>
-  <div id="status">🔒 종소리 잠김</div>
-  <button onclick="unlockSound()">🔔 종소리 테스트</button>
-</div>
-
-<audio id="bell" preload="auto">
-  <source src="https://actions.google.com/sounds/v1/alarms/school_bell.ogg">
-</audio>
-
 <script>
-const bell = document.getElementById("bell");
-let unlocked = false;
+  let audioCtx;
+  let soundEnabled = false;
 
-function unlockSound() {
-  bell.play();
-  unlocked = true;
-  document.getElementById("status").innerText = "🔓 종소리 활성화됨";
-}
+  function enableSound() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    playMelody();
+    soundEnabled = true;
+    alert("종소리 활성화 완료");
+  }
 
-// 시간표 데이터
-const schedule = [
-  { time: "08:40", label: "1교시 시작" },
-  { time: "10:00", label: "쉬는시간" },
-  { time: "10:20", label: "2교시 시작" },
-  { time: "11:40", label: "점심시간" },
-  { time: "12:40", label: "3교시 시작" },
-  { time: "14:00", label: "쉬는시간" },
-  { time: "14:20", label: "4교시 시작" },
-  { time: "15:30", label: "수업 종료" }
-];
+  // 🎵 레장조 도미솔 멜로디
+  const melody = [
+    293.66, 369.99, 440.00, 369.99,
+    440.00, 369.99, 293.66, 277.18,
+    246.94, 220.00, 196.00, 174.61,
+    293.66, 293.66,
+    277.18, 293.66, 329.63
+  ];
 
-let rung = {};
-const listDiv = document.getElementById("list");
+  function playMelody() {
+    if (!audioCtx) return;
 
-// 현황표 생성
-schedule.forEach((s, i) => {
-  const div = document.createElement("div");
-  div.className = "item";
-  div.id = "item-" + i;
-  div.innerText = `${s.time} · ${s.label}`;
-  listDiv.appendChild(div);
-});
+    let time = audioCtx.currentTime;
 
-function checkTime() {
-  const now = new Date();
-  const hh = String(now.getHours()).padStart(2, "0");
-  const mm = String(now.getMinutes()).padStart(2, "0");
-  const ss = String(now.getSeconds()).padStart(2, "0");
-  const current = `${hh}:${mm}`;
+    melody.forEach(freq => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
 
-  document.getElementById("time").innerText = `${hh}:${mm}:${ss}`;
+      osc.frequency.value = freq;
+      osc.type = "sine";
 
-  schedule.forEach((s, i) => {
-    const el = document.getElementById("item-" + i);
-    el.classList.remove("done", "now");
+      gain.gain.setValueAtTime(0.2, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.4);
 
-    if (current > s.time) {
-      el.classList.add("done");
-    } else if (current === s.time) {
-      el.classList.add("now");
-      document.getElementById("status").innerText = `▶️ ${s.label}`;
-      if (unlocked && !rung[s.time]) {
-        bell.play();
-        rung[s.time] = true;
-      }
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc.start(time);
+      osc.stop(time + 0.4);
+
+      time += 0.45;
+    });
+  }
+
+  const timetable = [
+    { name: "1교시", start: "08:40", end: "10:00" },
+    { name: "쉬는시간", start: "10:00", end: "10:20" },
+    { name: "2교시", start: "10:20", end: "11:40" },
+    { name: "점심", start: "11:40", end: "12:40" },
+    { name: "3교시", start: "12:40", end: "14:00" },
+    { name: "쉬는시간", start: "14:00", end: "14:20" },
+    { name: "4교시", start: "14:20", end: "15:30" }
+  ];
+
+  function tick() {
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2, "0");
+    const m = String(now.getMinutes()).padStart(2, "0");
+    const s = String(now.getSeconds()).padStart(2, "0");
+    const nowStr = `${h}:${m}`;
+
+    document.getElementById("time").innerText = `${h}:${m}:${s}`;
+
+    const box = document.getElementById("schedule");
+    box.innerHTML = "";
+    timetable.forEach(t => {
+      const div = document.createElement("div");
+      div.className = "item";
+      if (nowStr >= t.start && nowStr < t.end) div.classList.add("active");
+      div.textContent = `${t.name} ${t.start}–${t.end}`;
+      box.appendChild(div);
+    });
+
+    // ⏰ 교시 시작 시 멜로디 종
+    if (soundEnabled && s === "00") {
+      timetable.forEach(t => {
+        if (t.start === nowStr) playMelody();
+      });
     }
-  });
-}
+  }
 
-setInterval(checkTime, 1000);
+  setInterval(tick, 1000);
 </script>
-
-</body>
-</html>
