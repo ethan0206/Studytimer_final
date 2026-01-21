@@ -147,3 +147,85 @@ function toggleWhiteNoise() {
   if (whiteNoiseSource) { // 백색소음이 재생 중이면 중지
     whiteNoiseSource.stop();
     whiteNoiseSource.disconnect();
+    whiteNoiseGainNode.disconnect();
+    whiteNoiseSource = null;
+    button.textContent = "😴 백색소음 켜기";
+    console.log("백색소음 중지");
+  } else { // 백색소음이 재생 중이 아니면 시작
+    // ScriptProcessorNode는 Deprecated 되었지만, 간편하게 백색소음을 생성하기에 적합
+    whiteNoiseSource = audioCtx.createScriptProcessor(4096, 0, 1);
+    whiteNoiseSource.onaudioprocess = function(e) {
+      const output = e.outputBuffer.getChannelData(0);
+      for (let i = 0; i < output.length; i++) {
+        output[i] = Math.random() * 2 - 1; // -1에서 1 사이의 랜덤 값으로 백색소음 생성
+      }
+    };
+
+    whiteNoiseGainNode = audioCtx.createGain();
+    whiteNoiseGainNode.gain.value = 0.03; // 백색소음 볼륨 조절 (이전 0.1에서 0.03으로 더 줄임)
+
+    whiteNoiseSource.connect(whiteNoiseGainNode);
+    whiteNoiseGainNode.connect(audioCtx.destination);
+    whiteNoiseSource.start(); // start() 호출 필요 (ScriptProcessorNode)
+
+    button.textContent = "🔊 백색소음 끄기";
+    console.log("백색소음 시작");
+  }
+}
+
+/* ====== 시간표 ====== */
+const timetable = [
+  { name: "1교시", start: "08:40", end: "10:00" }, // 80분
+  { name: "쉬는시간", start: "10:00", end: "10:20" }, // 20분
+  { name: "2교시", start: "10:20", end: "11:40" }, // 80분
+  { name: "점심", start: "11:40", end: "12:40" },    // 60분 (고정)
+  { name: "3교시", start: "12:40", end: "14:00" }, // 80분
+  { name: "쉬는시간", start: "14:00", end: "14:20" }, // 20분
+  { name: "4교시", start: "14:20", end: "15:30" }  // 70분
+];
+
+// 페이지 로드 시 시간표 항목들을 한 번만 생성
+document.addEventListener("DOMContentLoaded", () => {
+  const scheduleBox = document.getElementById("schedule");
+  timetable.forEach((t, index) => {
+    const div = document.createElement("div");
+    div.className = "item";
+    div.id = `item-${index}`; // 고유 ID 추가
+    div.textContent = `${t.name} ${t.start}–${t.end}`;
+    scheduleBox.appendChild(div);
+  });
+  // 초기 시간 표시
+  tick();
+});
+
+function tick() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2,"0");
+  const m = String(now.getMinutes()).padStart(2,"0");
+  const s = String(now.getSeconds()).padStart(2,"0");
+  const hm = `${h}:${m}`;
+
+  document.getElementById("time").innerText = `${h}:${m}:${s}`;
+
+  timetable.forEach((t, index) => {
+    const itemDiv = document.getElementById(`item-${index}`); // 고유 ID로 요소를 가져옴
+    if (itemDiv) { // 요소가 존재하는지 확인
+      if (hm >= t.start && hm < t.end) {
+        itemDiv.classList.add("active");
+      } else {
+        itemDiv.classList.remove("active");
+      }
+    }
+
+    // 종소리 활성화 상태이고 정각이 되면 멜로디 재생
+    if (soundEnabled && s === "00" && hm === t.start) {
+        ensureAudioContextAndPlayBell(); // ensureAudioContextAndPlayBell 함수는 audioCtx를 활성화하고 playMelody를 호출
+    }
+  });
+}
+
+setInterval(tick, 1000);
+</script>
+
+</body>
+</html>
