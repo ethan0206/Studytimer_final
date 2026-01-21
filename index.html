@@ -145,14 +145,14 @@ function toggleWhiteNoise() {
   getOrCreateAudioContext(); // 오디오 컨텍스트가 존재하고 활성화되도록 함
 
   if (whiteNoiseSource) { // 백색소음이 재생 중이면 중지
-    whiteNoiseSource.stop();
+    whiteNoiseSource.stop(); // ScriptProcessorNode는 stop() 호출 가능
     whiteNoiseSource.disconnect();
     whiteNoiseGainNode.disconnect();
     whiteNoiseSource = null;
     button.textContent = "😴 백색소음 켜기";
     console.log("백색소음 중지");
   } else { // 백색소음이 재생 중이 아니면 시작
-    // ScriptProcessorNode는 Deprecated 되었지만, 간편하게 백색소음을 생성하기에 적합
+    // ScriptProcessorNode (deprecated지만 간단한 백색소음 구현에 사용)
     whiteNoiseSource = audioCtx.createScriptProcessor(4096, 0, 1);
     whiteNoiseSource.onaudioprocess = function(e) {
       const output = e.outputBuffer.getChannelData(0);
@@ -162,11 +162,11 @@ function toggleWhiteNoise() {
     };
 
     whiteNoiseGainNode = audioCtx.createGain();
-    whiteNoiseGainNode.gain.value = 0.03; // 백색소음 볼륨 조절 (이전 0.1에서 0.03으로 더 줄임)
+    whiteNoiseGainNode.gain.value = 0.02; // 백색소음 볼륨 조절 (더 낮춤)
 
     whiteNoiseSource.connect(whiteNoiseGainNode);
     whiteNoiseGainNode.connect(audioCtx.destination);
-    whiteNoiseSource.start(); // start() 호출 필요 (ScriptProcessorNode)
+    whiteNoiseSource.start(); // 🔥 ScriptProcessorNode도 start()를 호출해야 함
 
     button.textContent = "🔊 백색소음 끄기";
     console.log("백색소음 시작");
@@ -218,8 +218,9 @@ function tick() {
     }
 
     // 종소리 활성화 상태이고 정각이 되면 멜로디 재생
+    // soundEnabled가 true여야 하고, 정확히 t.start 시간에 s가 "00"이어야 함
     if (soundEnabled && s === "00" && hm === t.start) {
-        ensureAudioContextAndPlayBell(); // ensureAudioContextAndPlayBell 함수는 audioCtx를 활성화하고 playMelody를 호출
+        playMelody(); // 이미 getOrCreateAudioContext()와 soundEnabled가 ensureAudioContextAndPlayBell()에서 처리되므로 playMelody만 호출
     }
   });
 }
