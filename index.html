@@ -87,20 +87,20 @@ function ensureAudioContextAndPlayBell() {
   alert("종소리 활성화 완료");
 }
 
-/* 🎵 멜로디 (0 = 쉼표) */
+/* 🎵 멜로디 (0 = 쉼표) - "디리리리" 및 "도 (낮은)시 도" 변경 */
 const melody = [
-  // 도미솔미 도미솔미
-  293.66, 369.99, 440.00, 369.99,
-  293.66, 369.99, 440.00, 369.99,
+  // 디리리리 (솔 - 파# - 미 - 레) 느낌
+  392.00, // G4 (솔)
+  369.99, // F#4 (파#)
+  329.63, // E4 (미)
+  293.66, // D4 (레)
 
-  // 높은도부터 하행
-  587.33, 554.37, 493.88, 440.00,
-  392.00, 369.99, 329.63, 293.66,
+  0, // 짧게 쉬고
 
-  // 도 (쉬고) 시 (쉬고) 도
-  293.66, 0,
-  554.37, 0,
-  293.66
+  // 도 (C4) - 시 (B3) - 도 (C4)
+  261.63, // C4 (도)
+  246.94, // B3 (낮은 시)
+  261.63  // C4 (도)
 ];
 
 function playMelody() {
@@ -113,7 +113,7 @@ function playMelody() {
   melody.forEach(freq => {
     if (freq === 0) {
       // 쉼표
-      t += 0.18;
+      t += 0.2; // 쉼표 시간 조정
       return;
     }
 
@@ -132,7 +132,7 @@ function playMelody() {
     osc.start(t);
     osc.stop(t + 0.16);
 
-    t += 0.2; // 🔥 빠른 템포
+    t += 0.2; // 템포 조정
   });
 }
 
@@ -166,7 +166,8 @@ function toggleWhiteNoise() {
 
     whiteNoiseSource.connect(whiteNoiseGainNode);
     whiteNoiseGainNode.connect(audioCtx.destination);
-    whiteNoiseSource.start(); // 🔥 ScriptProcessorNode도 start()를 호출해야 함
+    // Note: ScriptProcessorNode의 start()는 명시적으로 호출할 필요 없음, connect() 되면 시작됨
+    // 다만, 웹킷 기반 브라우저에서 문제 발생 시 `whiteNoiseSource.buffer = audioCtx.createBuffer(1, 4096, audioCtx.sampleRate); whiteNoiseSource.loop = true;` 등으로 대체 시도
 
     button.textContent = "🔊 백색소음 끄기";
     console.log("백색소음 시작");
@@ -232,5 +233,3 @@ setInterval(tick, 1000);
 
 </body>
 </html>
-
-
