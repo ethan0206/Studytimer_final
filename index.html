@@ -116,8 +116,45 @@ function playMelody() {
     t += 0.2; // 🔥 빠른 템포
   });
 }
+
+/* ====== 시간표 ====== */
+const timetable = [
+  { name: "1교시", start: "08:40", end: "10:00" },
+  { name: "쉬는시간", start: "10:00", end: "10:20" },
+  { name: "2교시", start: "10:20", end: "11:40" },
+  { name: "점심", start: "11:40", end: "12:40" },
+  { name: "3교시", start: "12:40", end: "14:00" },
+  { name: "쉬는시간", start: "14:00", end: "14:20" },
+  { name: "4교시", start: "14:20", end: "15:30" }
+];
+
+function tick() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2,"0");
+  const m = String(now.getMinutes()).padStart(2,"0");
+  const s = String(now.getSeconds()).padStart(2,"0");
+  const hm = `${h}:${m}`;
+
+  document.getElementById("time").innerText = `${h}:${m}:${s}`;
+
+  const box = document.getElementById("schedule");
+  box.innerHTML = "";
+
+  timetable.forEach(t => {
+    const div = document.createElement("div");
+    div.className = "item";
+    if (hm >= t.start && hm < t.end) div.classList.add("active");
+    div.textContent = `${t.name} ${t.start}–${t.end}`;
+    box.appendChild(div);
+
+    if (soundEnabled && s === "00" && hm === t.start) {
+      playMelody();
+    }
+  });
+}
+
+setInterval(tick, 1000);
 </script>
 
 </body>
 </html>
-
