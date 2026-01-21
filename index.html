@@ -71,13 +71,20 @@ function enableSound() {
   alert("종소리 활성화 완료");
 }
 
-/* 🎵 빠른 템포 레장조 종 멜로디 */
+/* 🎵 멜로디 (0 = 쉼표) */
 const melody = [
+  // 도미솔미 도미솔미
   293.66, 369.99, 440.00, 369.99,
-  293.66, 369.99, 440.00, 587.33,
+  293.66, 369.99, 440.00, 369.99,
+
+  // 높은도부터 하행
   587.33, 554.37, 493.88, 440.00,
   392.00, 369.99, 329.63, 293.66,
-  293.66, 554.37, 293.66
+
+  // 도 (쉬고) 시 (쉬고) 도
+  293.66, 0,
+  554.37, 0,
+  293.66
 ];
 
 function playMelody() {
@@ -85,6 +92,12 @@ function playMelody() {
   let t = audioCtx.currentTime;
 
   melody.forEach(freq => {
+    if (freq === 0) {
+      // 쉼표
+      t += 0.18;
+      return;
+    }
+
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
 
@@ -92,55 +105,17 @@ function playMelody() {
     osc.frequency.value = freq;
 
     gain.gain.setValueAtTime(0.3, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
 
     osc.connect(gain);
     gain.connect(audioCtx.destination);
 
     osc.start(t);
-    osc.stop(t + 0.18);
+    osc.stop(t + 0.16);
 
-    t += 0.22; // 🔥 빠른 템포
+    t += 0.2; // 🔥 빠른 템포
   });
 }
-
-/* ====== 시간표 ====== */
-const timetable = [
-  { name: "1교시", start: "08:40", end: "10:00" },
-  { name: "쉬는시간", start: "10:00", end: "10:20" },
-  { name: "2교시", start: "10:20", end: "11:40" },
-  { name: "점심", start: "11:40", end: "12:40" },
-  { name: "3교시", start: "12:40", end: "14:00" },
-  { name: "쉬는시간", start: "14:00", end: "14:20" },
-  { name: "4교시", start: "14:20", end: "15:30" }
-];
-
-function tick() {
-  const now = new Date();
-  const h = String(now.getHours()).padStart(2,"0");
-  const m = String(now.getMinutes()).padStart(2,"0");
-  const s = String(now.getSeconds()).padStart(2,"0");
-  const hm = `${h}:${m}`;
-
-  document.getElementById("time").innerText = `${h}:${m}:${s}`;
-
-  const box = document.getElementById("schedule");
-  box.innerHTML = "";
-
-  timetable.forEach(t => {
-    const div = document.createElement("div");
-    div.className = "item";
-    if (hm >= t.start && hm < t.end) div.classList.add("active");
-    div.textContent = `${t.name} ${t.start}–${t.end}`;
-    box.appendChild(div);
-
-    if (soundEnabled && s === "00" && hm === t.start) {
-      playMelody();
-    }
-  });
-}
-
-setInterval(tick, 1000);
 </script>
 
 </body>
